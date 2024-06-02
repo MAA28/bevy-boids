@@ -1,4 +1,5 @@
 mod behaviors;
+mod egui;
 
 use std::f32::consts::PI;
 
@@ -8,6 +9,8 @@ use bevy::{
     prelude::*,
     window::WindowResolution,
 };
+use bevy_egui::EguiPlugin;
+use egui::egui_system;
 use rand::Rng;
 
 const MAX_SPEED: f32 = 250.0;
@@ -31,6 +34,15 @@ struct SeperationGizmo;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 struct CohesionGizmo;
 
+#[derive(Resource)]
+struct Behaviors{
+    seek_mouse: bool,
+    avoid_border: bool,
+    separation: bool,
+    alignment: bool,
+    cohesion: bool,
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -40,24 +52,29 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(EguiPlugin)
+
         .init_gizmo_group::<PhysicsGizmo>()
         .init_gizmo_group::<SteeringGizmo>()
         .init_gizmo_group::<AlignmentGizmo>()
         .init_gizmo_group::<SeperationGizmo>()
         .init_gizmo_group::<CohesionGizmo>()
+
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
+        .insert_resource(Behaviors { seek_mouse: false, avoid_border: false, separation: false, alignment: false, cohesion: false })
+
         .add_systems(Startup, setup)
         .add_systems(Update, update_boids_rotation)
+        .add_systems(Update, egui_system)
         .add_systems(FixedUpdate, update_boids_physics)
         // .add_systems(FixedUpdate, gravity_system)
         .add_systems(FixedUpdate, force_event_system)
         .add_systems(FixedUpdate, steering_event_system)
-        // .add_systems(FixedUpdate, behaviors::seek_mouse)
+        .add_systems(FixedUpdate, behaviors::seek_mouse)
         .add_systems(FixedUpdate, behaviors::seperate)
         .add_systems(FixedUpdate, behaviors::align)
         .add_systems(FixedUpdate, behaviors::cohesion)
         .add_systems(FixedUpdate, behaviors::avoid_border)
-        .add_systems(Update, update_gizmo)
         .add_event::<ForceEvent>()
         .add_event::<SteeringEvent>()
         .run();
@@ -92,48 +109,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             Boid,
         ));
     }
-}
-
-fn update_gizmo(mut config_store: ResMut<GizmoConfigStore>, keyboard: Res<ButtonInput<KeyCode>>) {
-    let (physics, _) = config_store.config_mut::<PhysicsGizmo>();
-    if keyboard.pressed(KeyCode::Digit1) {
-        physics.enabled = true;
-    } else {
-        physics.enabled = false;
-    }
-    println!("Physics: {}", physics.enabled);
-
-    let (steering, _) = config_store.config_mut::<SteeringGizmo>();
-    if keyboard.pressed(KeyCode::Digit2) {
-        steering.enabled = true;
-    } else {
-        steering.enabled = false;
-    }
-    println!("Steering: {}", steering.enabled);
-
-    let (seperation, _) = config_store.config_mut::<SeperationGizmo>();
-    if keyboard.pressed(KeyCode::Digit3) {
-        seperation.enabled = true;
-    } else {
-        seperation.enabled = false;
-    }
-    println!("Seperation: {}", seperation.enabled);
-
-    let (cohesion, _) = config_store.config_mut::<CohesionGizmo>();
-    if keyboard.pressed(KeyCode::Digit4) {
-        cohesion.enabled = true;
-    } else {
-        cohesion.enabled = false;
-    }
-    println!("Cohesion: {}", cohesion.enabled);
-
-    let (alignment, _) = config_store.config_mut::<AlignmentGizmo>();
-    if keyboard.pressed(KeyCode::Digit5) {
-        alignment.enabled = true;
-    } else {
-        alignment.enabled = false;
-    }
-    println!("Alignment: {}", alignment.enabled);
 }
 
 fn update_boids_rotation(mut boids_query: Query<(&mut Transform, &Velocity), With<Boid>>) {

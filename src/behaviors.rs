@@ -1,6 +1,9 @@
 use bevy::{math::vec2, prelude::*, window::PrimaryWindow};
 
-use crate::{AlignmentGizmo, Boid, CohesionGizmo,  SeperationGizmo, SteeringEvent, SteeringGizmo, Velocity};
+use crate::{
+    AlignmentGizmo, Behaviors, Boid, CohesionGizmo, SeperationGizmo, SteeringEvent, SteeringGizmo,
+    Velocity,
+};
 
 const SEPERATION_WEIGHT: f32 = 100.0;
 const ALIGNMENT_WEIGHT: f32 = 1.0;
@@ -13,7 +16,11 @@ pub fn seek_mouse(
     mut gizmo: Gizmos<SteeringGizmo>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<Camera>>,
+    behaviors: Res<Behaviors>,
 ) {
+    if !behaviors.seek_mouse {
+        return;
+    }
     let window = windows.single();
     let (camera, camera_transform) = camera_q.single();
 
@@ -38,7 +45,11 @@ pub fn seperate(
     boids_query: Query<(&Transform, Entity), With<Boid>>,
     mut steering_writer: EventWriter<SteeringEvent>,
     mut gizmo: Gizmos<SeperationGizmo>,
+    behaviors: Res<Behaviors>,
 ) {
+    if !behaviors.separation {
+        return;
+    }
     for (transform, entity) in &boids_query {
         let position = transform.translation.truncate();
 
@@ -63,7 +74,7 @@ pub fn seperate(
 
             steering_writer.send(SteeringEvent {
                 entity,
-                weight: SEPERATION_WEIGHT, 
+                weight: SEPERATION_WEIGHT,
                 target: position + sum,
             });
         }
@@ -76,7 +87,11 @@ pub fn align(
     boids_query: Query<(&Transform, &Velocity, Entity), With<Boid>>,
     mut steering_writer: EventWriter<SteeringEvent>,
     mut gizmo: Gizmos<AlignmentGizmo>,
+    behaviors: Res<Behaviors>,
 ) {
+    if !behaviors.alignment {
+        return;
+    }
     for (transform, _, entity) in &boids_query {
         let mut sum = vec2(0.0, 0.0);
         let mut count = 0;
@@ -123,7 +138,11 @@ pub fn cohesion(
     boids_query: Query<(&Transform, Entity), With<Boid>>,
     mut steering_writer: EventWriter<SteeringEvent>,
     mut gizmo: Gizmos<CohesionGizmo>,
+    behaviors: Res<Behaviors>,
 ) {
+    if !behaviors.cohesion {
+        return;
+    }
     for (transform, entity) in &boids_query {
         let mut sum = vec2(0.0, 0.0);
         let mut count = 0;
