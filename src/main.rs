@@ -35,12 +35,23 @@ struct SeperationGizmo;
 struct CohesionGizmo;
 
 #[derive(Resource)]
-struct Behaviors{
-    seek_mouse: bool,
-    avoid_border: bool,
-    separation: bool,
-    alignment: bool,
-    cohesion: bool,
+struct Behaviors {
+    seek_mouse_strength: f32,
+    border_strength: f32,
+    alignment_strength: f32,
+    separation_strength: f32,
+    cohesion_strength: f32,
+
+    alignment_radius: f32,
+    seperation_radius: f32,
+    cohesion_radius: f32,
+}
+
+#[derive(Resource)]
+struct FpsHistory {
+    history: Vec<f64>,
+    min: f64,
+    max: f64,
 }
 
 fn main() {
@@ -53,15 +64,24 @@ fn main() {
             ..default()
         }))
         .add_plugins(EguiPlugin)
-
         .init_gizmo_group::<PhysicsGizmo>()
         .init_gizmo_group::<SteeringGizmo>()
         .init_gizmo_group::<AlignmentGizmo>()
         .init_gizmo_group::<SeperationGizmo>()
         .init_gizmo_group::<CohesionGizmo>()
-
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
-        .insert_resource(Behaviors { seek_mouse: false, avoid_border: false, separation: false, alignment: false, cohesion: false })
+        .insert_resource(Behaviors {
+            seek_mouse_strength: 0.0,
+            border_strength: 4.0,
+            alignment_strength: 2.0,
+            separation_strength: 10.0,
+            cohesion_strength: 0.01,
+
+            alignment_radius: 100.0,
+            seperation_radius: 100.0,
+            cohesion_radius: 70.0,
+        })
+        .insert_resource(FpsHistory { history: vec![], min: f64::MAX, max: f64::MIN })
 
         .add_systems(Startup, setup)
         .add_systems(Update, update_boids_rotation)
@@ -80,7 +100,18 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut config_store: ResMut<GizmoConfigStore>,
+) {
+    config_store.config_mut::<PhysicsGizmo>().0.enabled = false;
+    config_store.config_mut::<SteeringGizmo>().0.enabled = false;
+    config_store.config_mut::<AlignmentGizmo>().0.enabled = false;
+    config_store.config_mut::<SeperationGizmo>().0.enabled = false;
+    config_store.config_mut::<CohesionGizmo>().0.enabled = false;
+
+
     commands.spawn(Camera2dBundle::default());
 
     let mut rng = rand::thread_rng();
